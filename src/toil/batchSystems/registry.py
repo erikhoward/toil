@@ -44,6 +44,11 @@ def _htcondorBatchSystemFactory():
     from toil.batchSystems.htcondor import HTCondorBatchSystem
     return HTCondorBatchSystem
 
+def _azBatchBatchSystemFactory():
+    from toil.batchSystems.azure.azbatch import AzBatchSystem
+    return AzBatchSystem
+
+
 
 _DEFAULT_REGISTRY = {
     'parasol'        : _parasolBatchSystemFactory,
@@ -60,7 +65,9 @@ _DEFAULT_REGISTRY = {
     'torque'         : _torqueBatchSystemFactory,
     'Torque'         : _torqueBatchSystemFactory,
     'htcondor'       : _htcondorBatchSystemFactory,
-    'HTCondor'       : _htcondorBatchSystemFactory
+    'HTCondor'       : _htcondorBatchSystemFactory,
+    'AzureBatch'     : _azBatchBatchSystemFactory,
+    'azurebatch'     : _azBatchBatchSystemFactory
     }
 
 _UNIQUE_NAME = {
@@ -71,7 +78,8 @@ _UNIQUE_NAME = {
     'Mesos',
     'Slurm',
     'Torque',
-    'HTCondor'
+    'HTCondor',
+    'AzureBatch'
         }
 
 _batchSystemRegistry = _DEFAULT_REGISTRY.copy()
