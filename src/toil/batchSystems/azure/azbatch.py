@@ -1,30 +1,16 @@
+"""
+TODO
+
+"""
 from __future__ import print_function
-import datetime
 import os
-import sys
-import time
-import uuid
 import logging
-
-try:
-    input = raw_input
-except NameError:
-    pass
-
-import azure.storage.blob as azureblob
-import azure.batch.batch_service_client as batch
-import azure.batch.batch_auth as batchauth
-import azure.batch.models as batchmodels
-import azbexecutor
-from collections import namedtuple
 from azbexecutor import (AzExecutorOptions,
                          AzBatchExecutor)
 
 
-from toil.batchSystems.abstractBatchSystem import (AbstractScalableBatchSystem,
-                                                   BatchSystemSupport,
-                                                   NodeInfo)
-log = logging.getLogger(__name__)
+from toil.batchSystems.abstractBatchSystem import (BatchSystemSupport)
+logger = logging.getLogger(__name__)  # pylint: disable=locally-disabled, invalid-name
 
 class AzBatchSystem(BatchSystemSupport):
 
@@ -34,16 +20,20 @@ class AzBatchSystem(BatchSystemSupport):
 
     def __init__(self, maxCores, maxMemory, maxDisk, config):
         """
-        initializes the batch client and creates the pool. 
+        initializes the batch client and creates the pool.
         """
         super(AzBatchSystem, self).__init__(config, maxCores, maxMemory, maxDisk)
-        
-        exec_options = self.__getExectOptionsFromEnvVars()
 
-        self.executor = AzBatchExecutor(exec_options) 
-        self.userScript = None
+        exec_options = AzBatchSystem.optionsFromEnvVars()
 
-    def __getExectOptionsFromEnvVars(self):
+        self.executor = AzBatchExecutor(exec_options)
+        self.user_script = None
+
+    @classmethod
+    def optionsFromEnvVars(cls):
+        """
+        TODO
+        """
         pool_id = os.getenv("AZBATCH_POOLID")
         batch_account = os.getenv("AZBATCH_ACCOUNT")
         batch_key = os.getenv("AZBATCH_KEY")
@@ -65,7 +55,7 @@ class AzBatchSystem(BatchSystemSupport):
     # noinspection PyMethodParameters
     @classmethod
     def supportsAutoDeployment(cls):
-        return False
+        return True
 
     # noinspection PyMethodParameters
     @classmethod
@@ -73,9 +63,9 @@ class AzBatchSystem(BatchSystemSupport):
         return False
 
     def setUserScript(self, userScript):
-        raise NotImplementedError()
+        #raise NotImplementedError()
+        self.user_script = userScript
 
-        
     def issueBatchJob(self, jobNode):
         """
         Issues a job with the specified command to the batch system and returns a unique jobID.
@@ -85,13 +75,12 @@ class AzBatchSystem(BatchSystemSupport):
         :return: a unique jobID that can be used to reference the newly issued job
         :rtype: int
         """
-        
-        task_id = self.executor.addAzTask(
-        jobNode.displayName,
-        jobNode.command)
 
-      
-        log.debug('issueBatchJob task id:%s', task_id)
+        task_id = self.executor.addAzTask(
+            jobNode.displayName,
+            jobNode.command)
+
+        logger.debug('issueBatchJob task id:%s', task_id)
         return task_id
 
     def killBatchJobs(self, jobIDs):
@@ -101,10 +90,9 @@ class AzBatchSystem(BatchSystemSupport):
         :param jobIDs: list of IDs of jobs to kill
         :type jobIDs: list[int]
         """
-        for id in jobIDs:
-            self.executor.cancelAzTask(id)
-        
-    
+        for job_id in jobIDs:
+            self.executor.cancelAzTask(job_id)
+
     def getIssuedBatchJobIDs(self):
         """
         Gets all currently issued jobs
@@ -115,7 +103,8 @@ class AzBatchSystem(BatchSystemSupport):
         :rtype: list[str]
         """
         task_infos = self.executor.getAzTaskInfo()
-        return map(lambda t: t.id, task_infos) 
+
+        return [task_info.id for task_info in task_infos]
 
     def getRunningBatchJobIDs(self):
         """
@@ -128,10 +117,10 @@ class AzBatchSystem(BatchSystemSupport):
         """
         qry = "state eq 'running'"
         task_infos = self.executor.getAzTaskInfo(qry)
-        keys = map(lambda t : t.id, task_infos)
-        durations = map(lambda t : float(t.duration.total_seconds()), task_infos)
+        keys = [task_info.id for task_info in task_infos]
+        durations = [float(task_info.duration.total_seconds()) for task_info in task_infos]
         results = dict(zip(keys, durations))
-        log.debug('getRunningBatchJobIDs %s', results)
+        logger.debug('getRunningBatchJobIDs %s', results)
         return results
 
     def getUpdatedBatchJob(self, maxWait):
@@ -147,16 +136,16 @@ class AzBatchSystem(BatchSystemSupport):
                  tracking wall time. Returns None for jobs that were killed.
         """
         result = self.executor.popCompletedAzTask()
-        log.debug('getUpdatedBatchJob %s', result)
-        return result 
-       
+        logger.debug('getUpdatedBatchJob %s', result)
+        return result
+
     def shutdown(self):
         """
         Called at the completion of a toil invocation.
         Should cleanly terminate all worker threads.
         """
-        log.debug('shutdown')
-        
+        logger.debug('shutdown')
+
     def setEnv(self, name, value=None):
         """
         Set an environment variable for the worker process before it is launched. The worker
@@ -171,14 +160,15 @@ class AzBatchSystem(BatchSystemSupport):
         """
         self.executor.addUpdateEnvVar(name, value)
 
-        
+
     @classmethod
     def setOptions(cls, setOption):
         """
         Process command line or configuration options relevant to Azure Batch
         The
 
-        :param setOption: A function with signature setOption(varName, parsingFn=None, checkFn=None, default=None)
+        :param setOption: A function with signature:
+           setOption(varName, parsingFn=None, checkFn=None, default=None)
            used to update run configuration
         """
         setOption("pool_id", None, None, None)
@@ -189,4 +179,3 @@ class AzBatchSystem(BatchSystemSupport):
         setOption("storage_key", None, None, None)
         setOption("storage_container", None, None, "toil")
         setOption("storage_suffix", None, None, "core.windows.net")
-    

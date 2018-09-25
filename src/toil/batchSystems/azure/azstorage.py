@@ -1,6 +1,10 @@
+"""
+TODO
+"""
 import os
-import azure.storage.blob as azureblob
 import datetime
+
+import azure.storage.blob as azureblob
 
 class AzStorageUtil():
     """
@@ -9,7 +13,7 @@ class AzStorageUtil():
     def __init__(self, storage_account_name,
                  storage_account_key, container, storage_account_suffix):
         """
-        initializes the batch client and creates the pool. 
+        initializes the batch client and creates the pool.
         """
         self.__container = container
         self.__client = azureblob.BlockBlobService(account_name=storage_account_name,
@@ -20,7 +24,7 @@ class AzStorageUtil():
         """
         TODO
         """
-        
+
         sas_token = self.__client.generate_blob_shared_access_signature(
             self.__container,
             blob_name,
@@ -28,8 +32,8 @@ class AzStorageUtil():
             expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=2))
 
         sas_url = self.__client.make_blob_url(self.__container,
-                                                blob_name,
-                                                sas_token=sas_token)
+                                              blob_name,
+                                              sas_token=sas_token)
 
         return sas_url
 
