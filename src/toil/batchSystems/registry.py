@@ -45,7 +45,7 @@ def _htcondorBatchSystemFactory():
     return HTCondorBatchSystem
 
 def _azBatchBatchSystemFactory():
-    from toil.batchSystems.azure.azbatch import AzBatchSystem
+    from toil.batchSystems.azbatch import AzBatchSystem
     return AzBatchSystem
 
 
